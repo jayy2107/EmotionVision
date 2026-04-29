@@ -1,16 +1,20 @@
-# Facial Emotion Recognition
+# EmotionVision
 
-Real-time facial emotion recognition project developed by **Jayendra Singh** using Python, OpenCV, DeepFace and TensorFlow.
+EmotionVision is a real-time facial emotion recognition project developed by **Jayendra Singh** using Python, OpenCV, DeepFace, and TensorFlow.
+
+## Overview
+
+This project detects human facial emotions from a live webcam feed using artificial intelligence and computer vision.
 
 ## Features
 
-- Detects face using webcam
-- Predicts live emotions
-- Labels emotions in real time
-- Stylish showcase website included
-- AI + Computer Vision based project
+- Real-time webcam emotion detection
+- Face detection with Haar Cascade
+- Emotion classification using DeepFace
+- Stylish project showcase website
+- Fast and lightweight execution
 
-## Technologies Used
+## Technologies
 
 - Python
 - OpenCV
@@ -18,7 +22,7 @@ Real-time facial emotion recognition project developed by **Jayendra Singh** usi
 - TensorFlow
 - HTML / CSS / JavaScript
 
-## How to Run
+## Run Locally
 
 ```bash
 pip install -r requirements.txt
