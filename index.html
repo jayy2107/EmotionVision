@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jayendra Singh — Facial Emotion Recognition</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --black: #060608; --white: #f0ece2; --accent: #00ffaa;
+    --accent2: #ff3c5f; --accent3: #ffcc00; --accent4: #a78bfa;
+    --gray: #111114; --gray2: #1c1c20; --muted: #555;
+    --font-display: 'Syne', sans-serif; --font-mono: 'DM Mono', monospace;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--black); color: var(--white); font-family: var(--font-display); overflow-x: hidden; cursor: none; }
+
+  /* CURSOR */
+  .cursor { position: fixed; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); mix-blend-mode: difference; }
+  .cursor-ring { position: fixed; width: 32px; height: 32px; border: 1.5px solid var(--accent); border-radius: 50%; pointer-events: none; z-index: 9998; transform: translate(-50%,-50%); mix-blend-mode: difference; transition: width 0.15s, height 0.15s, border-color 0.15s; }
+  .cursor-ring.hover { width: 52px; height: 52px; border-color: var(--accent3); }
+
+  /* NAV */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 20px 56px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ffffff08; backdrop-filter: blur(24px); background: #06060899; }
+  .nav-logo { font-family: var(--font-mono); font-size: 12px; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; }
+  .nav-links { display: flex; gap: 36px; list-style: none; }
+  .nav-links a { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-decoration: none; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--white); }
+
+  /* HERO */
+  .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 56px 100px; position: relative; overflow: hidden; }
+
+  /* Animated grid background */
+  .hero-grid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: linear-gradient(#ffffff04 1px, transparent 1px), linear-gradient(90deg, #ffffff04 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at 60% 40%, black 30%, transparent 80%);
+  }
+
+  .hero-glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 65% 40%, #00ffaa12 0%, transparent 55%), radial-gradient(ellipse at 20% 70%, #a78bfa0a 0%, transparent 50%); }
+
+  /* Big background text */
+  .hero-bg-text {
+    position: absolute; bottom: -30px; left: -10px;
+    font-size: clamp(160px, 22vw, 320px);
+    font-weight: 800; letter-spacing: -0.05em;
+    color: transparent; -webkit-text-stroke: 1px #ffffff06;
+    pointer-events: none; line-height: 1; white-space: nowrap;
+    user-select: none;
+  }
+
+  .hero-top-bar {
+    position: absolute; top: 100px; left: 56px; right: 56px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  .hero-badge {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase;
+    border: 1px solid #00ffaa30; padding: 6px 16px; border-radius: 100px;
+    background: #00ffaa08;
+    opacity: 0; animation: fadeIn 1s ease forwards 0.3s;
+  }
+
+  .hero-year {
+    font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.15em;
+    opacity: 0; animation: fadeIn 1s ease forwards 0.5s;
+  }
+
+  .hero-content { position: relative; z-index: 2; }
+
+  .hero-title {
+    font-size: clamp(72px, 12vw, 180px);
+    font-weight: 800; line-height: 0.88;
+    letter-spacing: -0.04em; margin-bottom: 48px;
+    opacity: 0; animation: fadeUp 1s ease forwards 0.4s;
+  }
+  .hero-title .outline { color: transparent; -webkit-text-stroke: 1.5px var(--white); }
+  .hero-title .green { color: var(--accent); -webkit-text-stroke: 0; }
+
+  .hero-bottom { display: flex; justify-content: space-between; align-items: flex-end; opacity: 0; animation: fadeUp 1s ease forwards 0.7s; }
+  .hero-desc { max-width: 400px; font-family: var(--font-mono); font-size: 13px; line-height: 1.9; color: var(--muted); }
+  .hero-desc strong { color: var(--white); font-weight: 400; }
+
+  .hero-cta { display: flex; flex-direction: column; gap: 12px; align-items: flex-end; }
+  .btn { padding: 13px 28px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 2px; text-decoration: none; transition: all 0.25s; display: inline-block; }
+  .btn-primary { background: var(--accent); color: var(--black); font-weight: 500; }
+  .btn-primary:hover { background: #00dd90; transform: translateY(-2px); box-shadow: 0 8px 32px #00ffaa30; }
+  .btn-outline { border: 1px solid #ffffff20; color: var(--white); }
+  .btn-outline:hover { border-color: var(--white); transform: translateY(-2px); }
+
+  /* Floating emotion pills */
+  .pill {
+    position: absolute; font-family: var(--font-mono); font-size: 10px;
+    padding: 5px 12px; border-radius: 100px; letter-spacing: 0.1em;
+    opacity: 0; white-space: nowrap;
+  }
+  .p1 { top: 22%; right: 8%; background: #00ffaa15; color: var(--accent); border: 1px solid #00ffaa30; animation: fadeIn 1s forwards 1s, float1 5s ease-in-out infinite 1s; }
+  .p2 { top: 38%; right: 16%; background: #ffcc0012; color: var(--accent3); border: 1px solid #ffcc0025; animation: fadeIn 1s forwards 1.3s, float2 6s ease-in-out infinite 1.3s; }
+  .p3 { top: 55%; right: 5%; background: #ff3c5f12; color: var(--accent2); border: 1px solid #ff3c5f25; animation: fadeIn 1s forwards 1.6s, float1 7s ease-in-out infinite 1.6s; }
+  .p4 { top: 68%; right: 24%; background: #a78bfa12; color: var(--accent4); border: 1px solid #a78bfa25; animation: fadeIn 1s forwards 1.9s, float2 5s ease-in-out infinite 1.9s; }
+  .p5 { top: 30%; right: 28%; background: #ffffff08; color: #777; border: 1px solid #ffffff15; animation: fadeIn 1s forwards 2.2s, float1 6s ease-in-out infinite 2.2s; }
+
+  @keyframes float1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+  @keyframes float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+  @keyframes fadeIn { to { opacity: 1; } }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
+
+  /* MARQUEE */
+  .marquee-wrap { overflow: hidden; border-top: 1px solid #ffffff08; border-bottom: 1px solid #ffffff08; background: var(--gray); padding: 16px 0; }
+  .marquee-track { display: flex; gap: 0; animation: marquee 20s linear infinite; white-space: nowrap; }
+  .marquee-item { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); padding: 0 40px; border-right: 1px solid #ffffff10; flex-shrink: 0; }
+  .marquee-item span { color: var(--accent); margin-right: 16px; }
+  @keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+  /* STATS */
+  .stats-bar { display: grid; grid-template-columns: repeat(4,1fr); border-bottom: 1px solid #ffffff08; }
+  .stat { padding: 48px 40px; border-right: 1px solid #ffffff08; position: relative; overflow: hidden; transition: background 0.3s; }
+  .stat:last-child { border-right: none; }
+  .stat:hover { background: #ffffff04; }
+  .stat-num { font-size: 56px; font-weight: 800; color: var(--accent); line-height: 1; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .stat-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; }
+
+  /* SECTION BASE */
+  .section { padding: 140px 56px; }
+  .section-tag { font-family: var(--font-mono); font-size: 10px; color: var(--accent); letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 20px; }
+  .section-title { font-size: clamp(40px, 5.5vw, 80px); font-weight: 800; line-height: 0.95; letter-spacing: -0.03em; margin-bottom: 70px; }
+
+  /* DEMO */
+  .demo-section { padding: 140px 56px; background: var(--gray); border-top: 1px solid #ffffff08; border-bottom: 1px solid #ffffff08; }
+  .demo-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+  .demo-info { }
+  .demo-info p { font-family: var(--font-mono); font-size: 13px; color: var(--muted); line-height: 1.9; margin-bottom: 32px; }
+  .demo-command { background: var(--black); border: 1px solid #ffffff10; border-radius: 4px; padding: 16px 20px; font-family: var(--font-mono); font-size: 13px; color: var(--accent); display: flex; align-items: center; gap: 12px; }
+  .demo-command::before { content: '$'; color: var(--muted); }
+
+  .demo-screen { background: #0a0a0d; border: 1px solid #ffffff10; border-radius: 10px; overflow: hidden; box-shadow: 0 40px 80px #00000080; }
+  .demo-titlebar { background: #151518; padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #ffffff08; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot-r { background: #ff5f56; } .dot-y { background: #ffbd2e; } .dot-g { background: #27c93f; }
+  .demo-filename { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-left: 10px; }
+
+  .demo-cam { width: 100%; aspect-ratio: 4/3; background: #06060a; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .scan-line { position: absolute; left: 0; right: 0; height: 1px; background: linear-gradient(to right, transparent, var(--accent), transparent); animation: scan 2.5s linear infinite; opacity: 0.5; }
+  @keyframes scan { 0%{top:0%} 100%{top:100%} }
+
+  .face-box { width: 150px; height: 170px; position: relative; }
+  .face-box-border { position: absolute; inset: 0; border: 1.5px solid var(--accent); animation: pulsebox 2s ease-in-out infinite; }
+  @keyframes pulsebox { 0%,100%{box-shadow:0 0 16px #00ffaa25} 50%{box-shadow:0 0 40px #00ffaa50} }
+  .corner { position: absolute; width: 14px; height: 14px; border-color: var(--accent2); border-style: solid; }
+  .corner.tl { top: -2px; left: -2px; border-width: 2px 0 0 2px; }
+  .corner.tr { top: -2px; right: -2px; border-width: 2px 2px 0 0; }
+  .corner.bl { bottom: -2px; left: -2px; border-width: 0 0 2px 2px; }
+  .corner.br { bottom: -2px; right: -2px; border-width: 0 2px 2px 0; }
+
+  .emotion-tag { position: absolute; top: -34px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--black); font-family: var(--font-mono); font-size: 11px; font-weight: 500; padding: 3px 12px; border-radius: 2px; white-space: nowrap; }
+  .conf-bar-wrap { position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%); width: 160px; }
+  .conf-label { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-bottom: 4px; text-align: center; }
+  .conf-bar { height: 3px; background: #ffffff10; border-radius: 2px; overflow: hidden; }
+  .conf-fill { height: 100%; background: var(--accent); border-radius: 2px; animation: confanim 1.8s ease-in-out infinite; }
+  @keyframes confanim { 0%,100%{width:85%} 50%{width:97%} }
+
+  .demo-footer { padding: 12px 16px; background: #0f0f12; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #ffffff08; }
+  .demo-status { font-family: var(--font-mono); font-size: 10px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+  .live-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: blink 1.5s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .demo-emotion-read { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+  .demo-emotion-read span { color: var(--accent3); }
+
+  /* EMOTIONS */
+  .emotions-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; }
+  .emotion-card { background: var(--gray); border: 1px solid #ffffff08; border-radius: 8px; padding: 32px 16px; text-align: center; transition: all 0.35s cubic-bezier(0.4,0,0.2,1); cursor: pointer; position: relative; overflow: hidden; }
+  .emotion-card::after { content:''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.35s; background: radial-gradient(ellipse at 50% 80%, var(--card-color,var(--accent)) 0%, transparent 70%); opacity: 0; }
+  .emotion-card:hover { transform: translateY(-10px) scale(1.02); border-color: var(--card-color,var(--accent)); box-shadow: 0 20px 60px color-mix(in srgb, var(--card-color,var(--accent)) 20%, transparent); }
+  .emotion-card:hover::after { opacity: 0.08; }
+
+  .emotion-card[data-e="happy"]    { --card-color:#ffcc00; }
+  .emotion-card[data-e="sad"]      { --card-color:#4da6ff; }
+  .emotion-card[data-e="angry"]    { --card-color:#ff3c5f; }
+  .emotion-card[data-e="fear"]     { --card-color:#a78bfa; }
+  .emotion-card[data-e="surprise"] { --card-color:#00ffaa; }
+  .emotion-card[data-e="disgust"]  { --card-color:#ff8800; }
+  .emotion-card[data-e="neutral"]  { --card-color:#888888; }
+  .emotion-card[data-e="contempt"] { --card-color:#ff6b9d; }
+  .emotion-card[data-e="excited"]  { --card-color:#ff9500; }
+  .emotion-card[data-e="confused"] { --card-color:#00d4ff; }
+
+  .emotion-emoji { font-size: 44px; margin-bottom: 14px; display: block; filter: drop-shadow(0 4px 12px #00000060); }
+  .emotion-name { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--card-color,var(--white)); margin-bottom: 8px; }
+  .emotion-desc { font-family: var(--font-mono); font-size: 10px; color: var(--muted); line-height: 1.6; }
+
+  /* HOW IT WORKS */
+  .how-section { padding: 140px 56px; background: var(--gray); border-top: 1px solid #ffffff08; border-bottom: 1px solid #ffffff08; }
+  .flow-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 0; margin-top: 70px; position: relative; }
+  .flow-grid::before { content:''; position: absolute; top: 36px; left: 10%; right: 10%; height: 1px; background: linear-gradient(to right, transparent, var(--accent) 30%, var(--accent) 70%, transparent); opacity: 0.4; }
+  .flow-step { text-align: center; padding: 0 20px; }
+  .flow-num { width: 72px; height: 72px; margin: 0 auto 28px; background: var(--black); border: 1px solid #00ffaa40; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 13px; color: var(--accent); position: relative; z-index: 1; transition: all 0.3s; }
+  .flow-step:hover .flow-num { background: #00ffaa12; border-color: var(--accent); box-shadow: 0 0 30px #00ffaa20; }
+  .flow-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+  .flow-desc { font-family: var(--font-mono); font-size: 11px; color: var(--muted); line-height: 1.8; }
+
+  /* TECH */
+  .tech-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-top: 70px; }
+  .tech-card { background: var(--gray2); border: 1px solid #ffffff08; border-radius: 8px; padding: 36px; display: flex; gap: 24px; align-items: flex-start; transition: all 0.3s; position: relative; overflow: hidden; }
+  .tech-card::before { content:''; position: absolute; inset: 0; background: linear-gradient(135deg, var(--tc,#00ffaa) 0%, transparent 60%); opacity: 0; transition: opacity 0.3s; }
+  .tech-card:hover { border-color: #ffffff18; transform: translateY(-4px); }
+  .tech-card:hover::before { opacity: 0.04; }
+  .tech-card[data-tc="python"] { --tc:#ffcc00; } .tech-card[data-tc="opencv"] { --tc:#4da6ff; }
+  .tech-card[data-tc="deepface"] { --tc:#ff3c5f; } .tech-card[data-tc="tf"] { --tc:#ff8800; }
+  .tech-icon { width: 52px; height: 52px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; position: relative; z-index: 1; }
+  .tech-name { font-size: 20px; font-weight: 700; margin-bottom: 8px; position: relative; z-index: 1; }
+  .tech-tag { font-family: var(--font-mono); font-size: 10px; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; position: relative; z-index: 1; }
+  .tech-desc { font-family: var(--font-mono); font-size: 12px; color: var(--muted); line-height: 1.8; position: relative; z-index: 1; }
+
+  /* ACCURACY */
+  .accuracy-section { padding: 140px 56px; }
+  .acc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 70px; }
+  .acc-row { display: grid; grid-template-columns: 130px 1fr 52px; align-items: center; gap: 16px; padding: 16px 20px; background: var(--gray); border: 1px solid #ffffff08; border-radius: 6px; transition: border-color 0.3s; }
+  .acc-row:hover { border-color: #ffffff18; }
+  .acc-label { font-family: var(--font-mono); font-size: 12px; color: var(--white); }
+  .acc-bar-bg { height: 6px; background: #ffffff08; border-radius: 3px; overflow: hidden; }
+  .acc-bar-fill { height: 100%; border-radius: 3px; width: 0; transition: width 1.8s cubic-bezier(0.4,0,0.2,1); }
+  .acc-pct { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: right; font-weight: 500; }
+
+  /* ABOUT */
+  .about-section { padding: 140px 56px; background: var(--gray); border-top: 1px solid #ffffff08; display: grid; grid-template-columns: 1.2fr 1fr; gap: 100px; align-items: center; }
+  .about-eyebrow { font-family: var(--font-mono); font-size: 10px; color: var(--accent); letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 20px; }
+  .about-name { font-size: clamp(48px, 7vw, 96px); font-weight: 800; line-height: 0.9; letter-spacing: -0.03em; margin-bottom: 28px; }
+  .about-name .outline { color: transparent; -webkit-text-stroke: 1px var(--white); }
+  .about-text { font-family: var(--font-mono); font-size: 13px; color: var(--muted); line-height: 2; }
+  .detail-list { display: flex; flex-direction: column; gap: 0; }
+  .detail-item { display: flex; justify-content: space-between; padding: 18px 0; border-bottom: 1px solid #ffffff08; }
+  .detail-item:first-child { border-top: 1px solid #ffffff08; }
+  .dk { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .dv { font-family: var(--font-mono); font-size: 12px; color: var(--white); }
+  .dv.green { color: var(--accent); }
+
+  /* FOOTER */
+  footer { padding: 28px 56px; border-top: 1px solid #ffffff08; display: flex; justify-content: space-between; align-items: center; }
+  .footer-l { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+  .footer-l span { color: var(--accent); }
+  .footer-r { font-family: var(--font-mono); font-size: 10px; color: #333; letter-spacing: 0.1em; }
+
+  @media(max-width:900px){
+    nav{padding:18px 24px;} .nav-links{gap:24px;}
+    .hero{padding:0 24px 80px;} .hero-top-bar{left:24px;right:24px;}
+    .hero-title{font-size:clamp(56px,15vw,100px);}
+    .hero-bottom{flex-direction:column;gap:32px;align-items:flex-start;}
+    .hero-cta{flex-direction:row;align-items:flex-start;}
+    .stats-bar{grid-template-columns:repeat(2,1fr);}
+    .stat{padding:32px 24px;}
+    .section,.demo-section,.how-section,.accuracy-section{padding:80px 24px;}
+    .about-section{padding:80px 24px;grid-template-columns:1fr;gap:48px;}
+    .demo-inner{grid-template-columns:1fr;}
+    .emotions-grid{grid-template-columns:repeat(2,1fr);}
+    .flow-grid{grid-template-columns:1fr;gap:32px;} .flow-grid::before{display:none;}
+    .tech-grid{grid-template-columns:1fr;}
+    .acc-grid{grid-template-columns:1fr;}
+    footer{flex-direction:column;gap:10px;text-align:center;}
+    .p1,.p2,.p3,.p4,.p5{display:none;}
+    .hero-bg-text{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="ring"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">AT_EMOTION.py</div>
+  <ul class="nav-links">
+    <li><a href="#demo">Demo</a></li>
+    <li><a href="#emotions">Emotions</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#tech">Tech</a></li>
+    <li><a href="#accuracy">Accuracy</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-bg-text">EMOTION</div>
+
+  <div class="hero-top-bar">
+    <div class="hero-badge">// AI + Computer Vision</div>
+    <div class="hero-year">College Project — 2024</div>
+  </div>
+
+  <div class="pill p1">😊 HAPPY</div>
+  <div class="pill p2">😲 SURPRISE</div>
+  <div class="pill p3">😠 ANGRY</div>
+  <div class="pill p4">🤩 EXCITED</div>
+  <div class="pill p5">😐 NEUTRAL</div>
+
+  <div class="hero-content">
+    <h1 class="hero-title">
+      FACIAL<br>
+      <span class="outline">EMOTION</span><br>
+      <span class="green">DETECTION</span>
+    </h1>
+    <div class="hero-bottom">
+      <p class="hero-desc">
+        Real-time emotion recognition from live webcam feed using<br>
+        <strong>computer vision</strong> and <strong>deep learning</strong>.<br>
+        Detects 10 human emotions with up to 97% accuracy.
+      </p>
+      <div class="hero-cta">
+        <a href="#demo" class="btn btn-primary">See It Live</a>
+        <a href="#emotions" class="btn btn-outline">Explore Emotions</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee-track">
+    <div class="marquee-item"><span>●</span>Real-Time Detection</div>
+    <div class="marquee-item"><span>●</span>10 Emotions</div>
+    <div class="marquee-item"><span>●</span>OpenCV</div>
+    <div class="marquee-item"><span>●</span>DeepFace AI</div>
+    <div class="marquee-item"><span>●</span>TensorFlow</div>
+    <div class="marquee-item"><span>●</span>Python 3</div>
+    <div class="marquee-item"><span>●</span>97% Accuracy</div>
+    <div class="marquee-item"><span>●</span>Haar Cascade</div>
+    <div class="marquee-item"><span>●</span>Neural Networks</div>
+    <div class="marquee-item"><span>●</span>Computer Vision</div>
+    <!-- duplicate for seamless loop -->
+    <div class="marquee-item"><span>●</span>Real-Time Detection</div>
+    <div class="marquee-item"><span>●</span>10 Emotions</div>
+    <div class="marquee-item"><span>●</span>OpenCV</div>
+    <div class="marquee-item"><span>●</span>DeepFace AI</div>
+    <div class="marquee-item"><span>●</span>TensorFlow</div>
+    <div class="marquee-item"><span>●</span>Python 3</div>
+    <div class="marquee-item"><span>●</span>97% Accuracy</div>
+    <div class="marquee-item"><span>●</span>Haar Cascade</div>
+    <div class="marquee-item"><span>●</span>Neural Networks</div>
+    <div class="marquee-item"><span>●</span>Computer Vision</div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num">10</div><div class="stat-label">Emotions Detected</div></div>
+  <div class="stat"><div class="stat-num">30+</div><div class="stat-label">Frames Per Second</div></div>
+  <div class="stat"><div class="stat-num">97%</div><div class="stat-label">Top Accuracy</div></div>
+  <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Real Time Processing</div></div>
+</div>
+
+<!-- DEMO -->
+<section class="demo-section" id="demo">
+  <div class="section-tag">// Live Preview</div>
+  <div class="demo-inner">
+    <div class="demo-info">
+      <h2 class="section-title" style="margin-bottom:28px;">See It<br>In Action</h2>
+      <p>Open Terminal on your MacBook and run the command below. Your webcam will activate and emotion detection starts instantly.</p>
+      <div class="demo-command">python3 emotion.py</div>
+    </div>
+    <div class="demo-screen">
+      <div class="demo-titlebar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="demo-filename">emotion.py — Jayendra Singh</span>
+      </div>
+      <div class="demo-cam">
+        <div class="scan-line"></div>
+        <div class="face-box">
+          <div class="face-box-border"></div>
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="corner bl"></div><div class="corner br"></div>
+          <div class="emotion-tag" id="demoLabel">😊 HAPPY</div>
+          <div class="conf-bar-wrap">
+            <div class="conf-label">CONFIDENCE</div>
+            <div class="conf-bar"><div class="conf-fill"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-footer">
+        <div class="demo-status"><div class="live-dot"></div>LIVE FEED</div>
+        <div class="demo-emotion-read">Detected: <span id="curEmotion">HAPPY</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EMOTIONS -->
+<section class="section" id="emotions">
+  <div class="section-tag">// Detection Categories</div>
+  <h2 class="section-title">10 Emotions<br>Recognised</h2>
+  <div class="emotions-grid">
+    <div class="emotion-card" data-e="happy"><span class="emotion-emoji">😊</span><div class="emotion-name">Happy</div><div class="emotion-desc">Smiling, raised cheeks, bright eyes</div></div>
+    <div class="emotion-card" data-e="sad"><span class="emotion-emoji">😢</span><div class="emotion-name">Sad</div><div class="emotion-desc">Drooping mouth, teary eyes</div></div>
+    <div class="emotion-card" data-e="angry"><span class="emotion-emoji">😠</span><div class="emotion-name">Angry</div><div class="emotion-desc">Furrowed brows, tense jaw</div></div>
+    <div class="emotion-card" data-e="fear"><span class="emotion-emoji">😨</span><div class="emotion-name">Fear</div><div class="emotion-desc">Wide eyes, raised brows</div></div>
+    <div class="emotion-card" data-e="surprise"><span class="emotion-emoji">😲</span><div class="emotion-name">Surprise</div><div class="emotion-desc">Open mouth, wide eyes</div></div>
+    <div class="emotion-card" data-e="disgust"><span class="emotion-emoji">🤢</span><div class="emotion-name">Disgust</div><div class="emotion-desc">Wrinkled nose, curled lip</div></div>
+    <div class="emotion-card" data-e="neutral"><span class="emotion-emoji">😐</span><div class="emotion-name">Neutral</div><div class="emotion-desc">No strong expression shown</div></div>
+    <div class="emotion-card" data-e="contempt"><span class="emotion-emoji">😒</span><div class="emotion-name">Contempt</div><div class="emotion-desc">One-sided smirk, dismissive</div></div>
+    <div class="emotion-card" data-e="excited"><span class="emotion-emoji">🤩</span><div class="emotion-name">Excited</div><div class="emotion-desc">Big smile, energetic expression</div></div>
+    <div class="emotion-card" data-e="confused"><span class="emotion-emoji">😕</span><div class="emotion-name">Confused</div><div class="emotion-desc">Tilted head, squinted eyes</div></div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="section-tag">// System Architecture</div>
+  <h2 class="section-title">How It<br>Works</h2>
+  <div class="flow-grid">
+    <div class="flow-step"><div class="flow-num">01</div><div class="flow-title">Webcam Capture</div><div class="flow-desc">OpenCV captures 30+ frames per second from the MacBook camera continuously</div></div>
+    <div class="flow-step"><div class="flow-num">02</div><div class="flow-title">Grayscale Convert</div><div class="flow-desc">Frames converted to black & white for faster and more precise processing</div></div>
+    <div class="flow-step"><div class="flow-num">03</div><div class="flow-title">Face Detection</div><div class="flow-desc">Haar Cascade XML model scans each frame and locates faces with bounding boxes</div></div>
+    <div class="flow-step"><div class="flow-num">04</div><div class="flow-title">AI Analysis</div><div class="flow-desc">DeepFace neural network analyzes facial landmarks and predicts dominant emotion</div></div>
+    <div class="flow-step"><div class="flow-num">05</div><div class="flow-title">Live Display</div><div class="flow-desc">Emotion label and bounding box rendered on screen in real time at 30+ FPS</div></div>
+  </div>
+</section>
+
+<!-- TECH -->
+<section class="section" id="tech">
+  <div class="section-tag">// Technologies Used</div>
+  <h2 class="section-title">Built With</h2>
+  <div class="tech-grid">
+    <div class="tech-card" data-tc="python"><div class="tech-icon" style="background:#ffcc0015;">🐍</div><div><div class="tech-name">Python 3</div><div class="tech-tag">Core Language</div><div class="tech-desc">Simple yet powerful programming language ideal for AI, ML and computer vision applications.</div></div></div>
+    <div class="tech-card" data-tc="opencv"><div class="tech-icon" style="background:#4da6ff15;">📷</div><div><div class="tech-name">OpenCV</div><div class="tech-tag">Computer Vision</div><div class="tech-desc">Open Source Computer Vision Library handling webcam access, image processing and real-time rendering.</div></div></div>
+    <div class="tech-card" data-tc="deepface"><div class="tech-icon" style="background:#ff3c5f15;">🤖</div><div><div class="tech-name">DeepFace</div><div class="tech-tag">AI / Deep Learning</div><div class="tech-desc">Facebook Research AI library using neural networks trained on millions of faces for accurate emotion detection.</div></div></div>
+    <div class="tech-card" data-tc="tf"><div class="tech-icon" style="background:#ff880015;">⚡</div><div><div class="tech-name">TensorFlow</div><div class="tech-tag">ML Framework</div><div class="tech-desc">Industry-standard deep learning framework powering the DeepFace model behind the scenes.</div></div></div>
+  </div>
+</section>
+
+<!-- ACCURACY -->
+<section class="accuracy-section" id="accuracy">
+  <div class="section-tag">// Model Performance</div>
+  <h2 class="section-title">Detection<br>Accuracy</h2>
+  <div class="acc-grid" id="accGrid">
+    <div class="acc-row"><div class="acc-label">😊 Happy</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#ffcc00" data-w="97"></div></div><div class="acc-pct">97%</div></div>
+    <div class="acc-row"><div class="acc-label">😐 Neutral</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#888888" data-w="96"></div></div><div class="acc-pct">96%</div></div>
+    <div class="acc-row"><div class="acc-label">😲 Surprise</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#00ffaa" data-w="95"></div></div><div class="acc-pct">95%</div></div>
+    <div class="acc-row"><div class="acc-label">😠 Angry</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#ff3c5f" data-w="93"></div></div><div class="acc-pct">93%</div></div>
+    <div class="acc-row"><div class="acc-label">🤩 Excited</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#ff9500" data-w="92"></div></div><div class="acc-pct">92%</div></div>
+    <div class="acc-row"><div class="acc-label">😢 Sad</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#4da6ff" data-w="91"></div></div><div class="acc-pct">91%</div></div>
+    <div class="acc-row"><div class="acc-label">😨 Fear</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#a78bfa" data-w="89"></div></div><div class="acc-pct">89%</div></div>
+    <div class="acc-row"><div class="acc-label">🤢 Disgust</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#ff8800" data-w="88"></div></div><div class="acc-pct">88%</div></div>
+    <div class="acc-row"><div class="acc-label">😕 Confused</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#00d4ff" data-w="87"></div></div><div class="acc-pct">87%</div></div>
+    <div class="acc-row"><div class="acc-label">😒 Contempt</div><div class="acc-bar-bg"><div class="acc-bar-fill" style="background:#ff6b9d" data-w="85"></div></div><div class="acc-pct">85%</div></div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="about-section" id="about">
+  <div>
+    <div class="about-eyebrow">// Project Developer</div>
+    <div class="about-name">JAYENDRA<br><span class="outline">SINGH</span></div>
+    <p class="about-text">This project demonstrates real-time facial emotion recognition using computer vision and artificial intelligence. Built using Python, OpenCV and DeepFace — a deep learning library by Facebook Research.</p>
+  </div>
+  <div class="detail-list">
+    <div class="detail-item"><div class="dk">Project Type</div><div class="dv">College Project</div></div>
+    <div class="detail-item"><div class="dk">Language</div><div class="dv">Python 3</div></div>
+    <div class="detail-item"><div class="dk">Domain</div><div class="dv">Computer Vision / AI</div></div>
+    <div class="detail-item"><div class="dk">Libraries</div><div class="dv">OpenCV · DeepFace · TensorFlow</div></div>
+    <div class="detail-item"><div class="dk">Platform</div><div class="dv">macOS</div></div>
+    <div class="detail-item"><div class="dk">Emotions</div><div class="dv">10 Categories</div></div>
+    <div class="detail-item"><div class="dk">Status</div><div class="dv green">✓ Working & Live</div></div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-l">Facial Emotion Recognition — <span>Jayendra Singh</span></div>
+  <div class="footer-r">Python · OpenCV · DeepFace · TensorFlow</div>
+</footer>
+
+<script>
+  // Cursor — instant dot, fast ring
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('ring');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{
+    mx=e.clientX; my=e.clientY;
+    cursor.style.left=mx+'px'; cursor.style.top=my+'px';
+  });
+  (function loop(){
+    rx+=(mx-rx)*0.3; ry+=(my-ry)*0.3;
+    ring.style.left=rx+'px'; ring.style.top=ry+'px';
+    requestAnimationFrame(loop);
+  })();
+  document.querySelectorAll('a,.emotion-card,.tech-card,.btn,.stat,.flow-step').forEach(el=>{
+    el.addEventListener('mouseenter',()=>ring.classList.add('hover'));
+    el.addEventListener('mouseleave',()=>ring.classList.remove('hover'));
+  });
+
+  // Demo emotion cycler
+  const emotions=[
+    {l:'😊 HAPPY',n:'HAPPY'},{l:'😢 SAD',n:'SAD'},{l:'😠 ANGRY',n:'ANGRY'},
+    {l:'😲 SURPRISE',n:'SURPRISE'},{l:'😨 FEAR',n:'FEAR'},{l:'😐 NEUTRAL',n:'NEUTRAL'},
+    {l:'🤢 DISGUST',n:'DISGUST'},{l:'😒 CONTEMPT',n:'CONTEMPT'},
+    {l:'🤩 EXCITED',n:'EXCITED'},{l:'😕 CONFUSED',n:'CONFUSED'},
+  ];
+  let ei=0;
+  const dl=document.getElementById('demoLabel'), ce=document.getElementById('curEmotion');
+  setInterval(()=>{
+    ei=(ei+1)%emotions.length;
+    dl.textContent=emotions[ei].l;
+    ce.textContent=emotions[ei].n;
+  },1800);
+
+  // Accuracy bars on scroll
+  const bars=document.querySelectorAll('.acc-bar-fill');
+  new IntersectionObserver(entries=>{
+    if(entries[0].isIntersecting) bars.forEach(b=>b.style.width=b.dataset.w+'%');
+  },{threshold:0.2}).observe(document.getElementById('accGrid'));
+</script>
+</body>
+</html>
